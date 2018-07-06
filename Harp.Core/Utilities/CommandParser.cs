@@ -4,7 +4,6 @@ using System.Text;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
-using Humanizer;
 
 namespace Harp.Core.Utilities
 {
@@ -59,21 +58,16 @@ namespace Harp.Core.Utilities
         static EntityType getEntity(string fuzzyEntityName)
         {
             var processedFuzzyName = fuzzyEntityName.Trim();
-            var namePluralized = processedFuzzyName.Pluralize();
-            var nameSingularized = processedFuzzyName.Singularize();
 
             var matches = new List<EntityType>();
 
             foreach (var value in Enum.GetValues(typeof(EntityType)))
             {
                 var e = ((EntityType)value);
-                var name = e.ToString();
+                var entityTypeName = e.ToString();
 
-                if (string.Equals(name, namePluralized, StringComparison.InvariantCultureIgnoreCase)
-                    || string.Equals(name, nameSingularized, StringComparison.InvariantCultureIgnoreCase))
-                {
+                if (StringMatcher.IsAFuzzyMatch(fuzzyEntityName, matchTo: entityTypeName))
                     matches.Add(e);
-                }
 
             }
 
@@ -95,11 +89,6 @@ namespace Harp.Core.Utilities
         public string ByColumn { get; set; }
     }
 
-    public enum EntityType
-    {
-        Dogs
-    }
-
     public enum RequestType
     {
         GetAll,
@@ -107,6 +96,10 @@ namespace Harp.Core.Utilities
         GetFiltered,
     }
 
+    public enum EntityType
+    {
+        Dogs
+    }
 
     public class TooManyEntityMatchesException : Exception { }
     public class NoEntityMatchesException : Exception { }
