@@ -12,8 +12,8 @@ namespace Harp.Core.Utilities
             var pluralized = fuzzy.Pluralize();
             var singularized = fuzzy.Singularize();
 
-            return (string.Equals(pluralized, matchTo, StringComparison.InvariantCultureIgnoreCase)
-                 || string.Equals(singularized, matchTo, StringComparison.InvariantCultureIgnoreCase));
+            return (string.Equals(pluralized, matchTo, StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(singularized, matchTo, StringComparison.OrdinalIgnoreCase));
         }
 
     }

@@ -9,3 +9,6 @@
 - [x] utility method to get all column names on a table
 - [x] utility method to get all stored procs
 
+- [ ] utility method to get object id
+- [ ] utility method to get all stored procs that reference entity's table
+

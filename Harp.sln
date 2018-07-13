@@ -5,13 +5,14 @@ VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{86860CAB-9249-4BB6-85BF-9CB0E28DAED1}"
 	ProjectSection(SolutionItems) = preProject
-		notes.md = notes.md
 		readme.md = readme.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Harp.Core", "Harp.Core\Harp.Core.csproj", "{23C8972F-56C4-4E90-91FB-2FA45639A358}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Harp.Cmdline", "Harp.Cmdline\Harp.Cmdline.csproj", "{A6849679-BBA0-4157-B661-5DEF04DD0E4B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harp.Tests", "Harp.Tests\Harp.Tests.csproj", "{CC297CD3-C107-42BA-918F-23FC8EF2EE18}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +28,10 @@ Global
 		{A6849679-BBA0-4157-B661-5DEF04DD0E4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6849679-BBA0-4157-B661-5DEF04DD0E4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6849679-BBA0-4157-B661-5DEF04DD0E4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -7,11 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Domain\Imports.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Harp.Core\Harp.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Objects.harp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
