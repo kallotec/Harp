@@ -1,6 +1,4 @@
-﻿using Harp.Core.Connectors.Data;
-using Harp.Core.Generators;
-using Harp.Core.Utilities;
+﻿using Harp.Core.Services;
 using System;
 using System.IO;
 using System.Text;
@@ -11,18 +9,27 @@ namespace Harp.Cmdline
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-
-            //var result = CommandParser.Parse("get all dogs");
-
             var harpFilePath = Path.Combine(Environment.CurrentDirectory, "Objects.harp");
             Console.WriteLine(harpFilePath);
 
-            var outputFolder = Path.Combine(Environment.CurrentDirectory, "Generated");
-
-            var gen = new Generator();
             StringBuilder trace;
-            gen.Generate(harpFilePath, getSqlConnectionString(), outputFolder, out trace);
+
+            // read
+            var reader = new HarpFileReader();
+            var rResult = reader.Read(harpFilePath, out trace);
+            Console.WriteLine($"Result: {rResult}");
+
+            // make a change
+            rResult.map.Entities[0].Properties[1].ColumnName = "blah";
+
+            // write
+            var writer = new HarpFileWriter();
+            var wResult = writer.Write(rResult.map, harpFilePath, out trace);
+            Console.WriteLine($"Result: {wResult}");
+
+            Console.WriteLine($"----- TRACE -----");
+            Console.WriteLine(trace.ToString());
+            Console.WriteLine($"-----------------");
 
             Console.ReadLine();
 

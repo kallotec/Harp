@@ -5,7 +5,7 @@ using Humanizer;
 
 namespace Harp.Core.Utilities
 {
-    public class StringMatcher
+    internal class StringMatcher
     {
         public static bool IsAFuzzyMatch(string fuzzy, string matchTo)
         {

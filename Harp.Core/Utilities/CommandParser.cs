@@ -12,7 +12,7 @@ namespace Harp.Core.Utilities
      * - Alotta refactoring
      */
 
-    public static class CommandParser
+    internal static class CommandParser
     {
         public static Command Parse(string command)
         {

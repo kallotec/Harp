@@ -1,6 +1,11 @@
-﻿
-Dog:
- - Get by ID
- - Get all
- - Save
 
+Dog:
+  Table: dbo.Dogs
+  Properties:
+  - ID: id
+  - Name: name
+  - Age: age
+  Behaviors:
+  - Get by ID: dbo.test1
+  - Get all
+  - Save: dbo.test3

@@ -7,13 +7,13 @@ using System.Data.SqlClient;
 using System.Text;
 using Dapper;
 
-namespace Harp.Core.Connectors.Data
+namespace Harp.Core.Utilities
 {
     /*
      * TODO: Use Dapper
      */
 
-    public class Sql
+    internal class Sql
     {
         public Sql(string connectionString)
         {
@@ -207,4 +207,5 @@ namespace Harp.Core.Connectors.Data
         }
 
     }
+
 }
