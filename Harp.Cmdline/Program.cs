@@ -9,29 +9,47 @@ namespace Harp.Cmdline
     {
         static void Main(string[] args)
         {
-            var harpFilePath = Path.Combine(Environment.CurrentDirectory, "Objects.harp");
-            Console.WriteLine(harpFilePath);
+            try
+            {
+                var harpFilePath = Path.Combine(Environment.CurrentDirectory, "Objects.harp");
+                Console.WriteLine(harpFilePath);
 
-            StringBuilder trace;
+                StringBuilder trace;
 
-            // read
-            var reader = new HarpFileReader();
-            var rResult = reader.Read(harpFilePath, out trace);
-            Console.WriteLine($"Result: {rResult}");
+                // read
+                var reader = new HarpFileReader();
+                var rResult = reader.Read(harpFilePath, out trace);
+                Console.WriteLine($"Read: {rResult.code}");
 
-            // make a change
-            rResult.map.Entities[0].Properties[1].ColumnName = "blah";
+                if (rResult.code != HarpFileReader.ReadResult.OK)
+                    return;
 
-            // write
-            var writer = new HarpFileWriter();
-            var wResult = writer.Write(rResult.map, harpFilePath, out trace);
-            Console.WriteLine($"Result: {wResult}");
+                // synchronize
+                var sync = new HarpSynchronizer();
+                var sResult = sync.SynchronizeFile(rResult.map, getSqlConnectionString(), out trace);
+                Console.WriteLine($"Sync: {sResult}");
 
-            Console.WriteLine($"----- TRACE -----");
-            Console.WriteLine(trace.ToString());
-            Console.WriteLine($"-----------------");
+                if (sResult != HarpSynchronizer.SynchronizeResult.OK)
+                    return;
 
-            Console.ReadLine();
+                // write
+                var writer = new HarpFileWriter();
+                var wResult = writer.Write(rResult.map, harpFilePath, out trace);
+                Console.WriteLine($"Write: {wResult}");
+
+                if (wResult != HarpFileWriter.WriteResult.OK)
+                    return;
+
+                Console.WriteLine($"----- TRACE -----");
+                Console.WriteLine(trace.ToString());
+                Console.WriteLine($"-----------------");
+
+            }
+            finally
+            {
+                Console.ReadLine();
+
+            }
 
         }
 

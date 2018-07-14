@@ -23,14 +23,17 @@ namespace Harp.Core.Utilities
         string connectionString;
 
 
-        public int GetTableObjectId(string tableName)
+        public int? GetTableObjectId(string fullTableName)
         {
-            var command = "select name, [object_id] from sys.tables where type = 'U'";
-            var results = QueryDoubleColumn(command);
+            var simpleTableName = getObjectName(fullTableName);
 
-            var match = results.SingleOrDefault(r => StringMatcher.IsAFuzzyMatch(r.first, tableName));
+            var command = $"select [object_id] from sys.tables where type = 'U' and name = '{simpleTableName}'";
+            var result = QueryScalar(command);
 
-            return match.second;
+            if (string.IsNullOrWhiteSpace(result))
+                return null;
+
+            return int.Parse(result);
         }
 
         public string GetTableName(int objectId)
@@ -38,6 +41,14 @@ namespace Harp.Core.Utilities
             var command = $"select name from sys.tables where object_id = {objectId}";
             var result = QueryScalar(command);
             
+            return result;
+        }
+
+        public List<(string fullName, int objectId)> GetAllTables()
+        {
+            var command = $"select object_schema_name(object_id) + '.' + [name], object_id from sys.tables where type = 'U'";
+            var result = QueryDoubleColumn(command);
+
             return result;
         }
 
@@ -49,13 +60,11 @@ namespace Harp.Core.Utilities
             return results.ToArray();
         }
 
-        public int[] GetStoredProcsThatRefEntity(int objectId)
+        public List<(string fullName, int objectId)> GetStoredProcsThatRefEntity(int objectId)
         {
-            var query = getQuery_ProcsThatReferenceObject(objectId);
-
-            var results = QuerySingleColumn(query).Select(r => int.Parse(r));
-
-            return results.ToArray();
+            var query = getQueryProcIdsThatReferenceObject(objectId);
+            var results = QueryDoubleColumn(query);
+            return results;
         }
 
         public string GetFullObjectName(int objectId)
@@ -65,13 +74,6 @@ namespace Harp.Core.Utilities
             return result;
         }
 
-        public string[] GetAllStoredProcNames()
-        {
-            var command = "select * from sys.procedures where [type] = 'P'";
-            var results = QuerySingleColumn(command);
-
-            return results.ToArray();
-        }
 
 
         public List<(string first, int second)> QueryDoubleColumn(string sql)
@@ -147,65 +149,32 @@ namespace Harp.Core.Utilities
             }
         }
 
-        string getQuery_ProcsThatReferenceObject(int objectId)
+        string getQueryProcIdsThatReferenceObject(int objectId)
         {
-            var query = @"
-    declare @objectId int = " + objectId + @";
-
-    DECLARE @sps TABLE(name VARCHAR(255), objectType VARCHAR(3), objectId INT, schemaName VARCHAR(20), fullName VARCHAR(255))
-
-    --get all user created sp's in db instance
-    INSERT INTO @sps(name, objectType, objectId, schemaName, fullName)
-    SELECT so.name, LTRIM(RTRIM(so.type)), so.object_id, OBJECT_SCHEMA_NAME(so.object_id), (OBJECT_SCHEMA_NAME(so.object_id) + '.' + so.name)
-    FROM sys.objects so
-    WHERE so.type = 'P' OR so.type = 'U' OR so.type = 'V' OR so.type = 'FN' OR so.type = 'IF' OR so.type = 'TF'
-
-    --collate all references between only the above db objects
-    DECLARE @references TABLE(
-        [fromId] int,
-        [fromType] VARCHAR(3),
-        [toId] int,
-        [toType] VARCHAR(3)
-    )
-
-    INSERT INTO
-        @references([fromId], [fromType], [toId], [toType])
-    SELECT
-        d.referencing_id,
-        sp.objectType,
-        sp2.objectId,
-        sp2.objectType
-    FROM
-        sys.sql_expression_dependencies d
-    INNER JOIN
-        @sps sp ON sp.objectId = d.referencing_id--enforce that it is a user created SP
-    INNER JOIN
-        @sps sp2 ON sp2.name = d.referenced_entity_name--enforce that it is a user created SP
-    WHERE
-        d.referenced_class = 1
-        AND d.referencing_class = 1
-
-    SELECT
-        r.[fromId] as object_id
-        --OBJECT_SCHEMA_NAME(r.[fromId]) + '.' + OBJECT_NAME(r.[fromId]) as object_name
-        /*OBJECT_SCHEMA_NAME(r.[fromId]) as [fromSchema],
-        r.[fromId],
-        OBJECT_NAME(r.[fromId]) as [from],
-        r.[fromType],
-        OBJECT_SCHEMA_NAME(r.[toId]) as [toSchema],
-        r.[toId],
-        OBJECT_NAME(r.[toId]) as [to],
-        r.[toType]*/
-
-    FROM
-        @references r
-    WHERE
-        r.toId = @objectId
-        and r.fromType = 'P'";
-
+            var query = @"select (referencing_schema_name + '.' + referencing_entity_name), referencing_id from sys.dm_sql_referencing_entities (object_name(" + objectId + "), 'OBJECT')";
             return query;
         }
 
+        string getObjectName(string fullTableName)
+        {
+            if (!fullTableName.Contains("."))
+                return fullTableName;
+
+            var components = fullTableName.Split(".", StringSplitOptions.RemoveEmptyEntries);
+            return components.Last();
+        }
+
+
+        //public string[] GetAllStoredProcNames()
+        //{
+        //    var command = "select * from sys.procedures where [type] = 'P'";
+        //    var results = QuerySingleColumn(command);
+
+        //    return results.ToArray();
+        //}
+
     }
+
+    public enum ProcAction { Select, SelectAll, InsertUpdate, Delete }
 
 }

@@ -11,7 +11,7 @@ namespace Harp.Core.Services
 {
     public class HarpSynchronizer
     {
-        public GenerateResult SynchronizeFileWithDb(HarpFile mapFile, string sqlConnectionString, string outputFolder, out StringBuilder trace)
+        public SynchronizeResult SynchronizeFile(HarpFile mapFile, string sqlConnectionString, out StringBuilder trace)
         {
             trace = new StringBuilder();
 
@@ -19,30 +19,82 @@ namespace Harp.Core.Services
             {
                 var sql = new Sql(sqlConnectionString);
 
-                //var firstItem = entitiesAndBehaviors.First();
+                foreach (var entity in mapFile.Entities)
+                {
+                    int? tableId;
 
-                //var tableId = sql.GetTableObjectId(firstItem.Key);
-                //var tableName = sql.GetTableName(tableId);
-                //trace.AppendLine($"Sql object match: {tableName} ({tableId})");
+                    // Table
+                    if (string.IsNullOrWhiteSpace(entity.TableName))
+                    {
+                        // Try match to an existing table
+                        var tables = sql.GetAllTables();
 
-                //var columnNames = sql.GetColumnNames(tableId);
-                //trace.AppendLine($"Columns:");
-                //foreach (var name in columnNames)
-                //    trace.AppendLine(" - " + name);
+                        var matches = tables.Where(
+                            t => StringMatcher.IsAFuzzyMatch(
+                                getObjectName(t.fullName), entity.EntityName
+                            ));
 
-                //// generate entity class
-                //var classDefinition = generateEntityClass(tableName, rootNamespace, columnNames);
-                //var className = translateTableNameToClassName(tableName);
+                        if (matches.Count() > 1)
+                        {
+                            // Error: too many matches, can't decide.
+                            return SynchronizeResult.EntityNameMatchesTooManyTables;
+                        }
+                        else if (matches.Count() == 0)
+                        {
+                            // Error: no matches
+                            return SynchronizeResult.EntityNameMatchesNoTables;
+                        }
 
-                //var outputFile = Path.Combine(outputFolder, className + ".cs");
-                //File.WriteAllText(outputFile, classDefinition);
+                        var tableMatch = matches.Single();
 
-                return GenerateResult.OK;
+                        // Capture table name on entity
+                        entity.TableName = tableMatch.fullName;
+
+                    }
+
+                    tableId = sql.GetTableObjectId(entity.TableName);
+                    if (tableId == null)
+                        return SynchronizeResult.MatchedTableDoesNotExist;
+
+                    trace.AppendLine($"Table match: {entity.TableName} ({tableId})");
+
+                    // Columns
+                    var columnNames = sql.GetColumnNames(tableId.Value);
+
+                    trace.AppendLine($"Columns:");
+                    foreach (var name in columnNames)
+                        trace.AppendLine(" - " + name);
+
+                    foreach (var prop in entity.Properties.Where(p => !p.IsMapped))
+                    {
+                        var colMatches = columnNames.Where(c => StringMatcher.IsAFuzzyMatch(c, prop.Name));
+
+                        if (colMatches.Count() == 1)
+                        {
+                            prop.ColumnName = colMatches.Single();
+                        }
+                        else
+                        {
+                            // Error: Too matches for column
+                            // Error: No matches for column
+                            return SynchronizeResult.ColumnMatchingError;
+                        }
+
+                    }
+
+                }
+
+                return SynchronizeResult.OK;
+
+                // TODO: Uncomment when behaviours are syncing correctly
+                //return mapFile.Entities.All(e => e.IsFullyMapped) 
+                //    ? SynchronizeResult.OK 
+                //    : SynchronizeResult.UnknownError;
             }
             catch (Exception ex)
             {
                 trace.AppendLine($"{ex.GetType().Name}: {ex.ToString()}");
-                return GenerateResult.UnknownError;
+                return SynchronizeResult.UnknownError;
             }
 
         }
@@ -85,7 +137,24 @@ namespace " + rootNamespace + @"
             return "public string " + propertyName + " { get; set; }";
         }
 
-        public enum GenerateResult { UnknownError, OK }
+        string getObjectName(string fullTableName)
+        {
+            if (!fullTableName.Contains("."))
+                return fullTableName;
+
+            var components = fullTableName.Split(".", StringSplitOptions.RemoveEmptyEntries);
+            return components.Last();
+        }
+
+        public enum SynchronizeResult
+        {
+            UnknownError,
+            OK,
+            EntityNameMatchesTooManyTables,
+            EntityNameMatchesNoTables,
+            MatchedTableDoesNotExist,
+            ColumnMatchingError,
+        }
 
     }
 

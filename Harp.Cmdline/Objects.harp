@@ -7,5 +7,5 @@ Dog:
   - Age: age
   Behaviors:
   - Get by ID: dbo.test1
-  - Get all
+  - Get all: 
   - Save: dbo.test3
