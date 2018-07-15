@@ -13,7 +13,7 @@ namespace Harp.Core.Utilities
      * TODO: Use Dapper
      */
 
-    internal class Sql
+    public class Sql : ISql
     {
         public Sql(string connectionString)
         {
@@ -36,14 +36,6 @@ namespace Harp.Core.Utilities
             return int.Parse(result);
         }
 
-        public string GetTableName(int objectId)
-        {
-            var command = $"select name from sys.tables where object_id = {objectId}";
-            var result = QueryScalar(command);
-            
-            return result;
-        }
-
         public List<(string fullName, int objectId)> GetAllTables()
         {
             var command = $"select object_schema_name(object_id) + '.' + [name], object_id from sys.tables where type = 'U'";
@@ -60,23 +52,21 @@ namespace Harp.Core.Utilities
             return results.ToArray();
         }
 
-        public List<(string fullName, int objectId)> GetStoredProcsThatRefEntity(int objectId)
+        public List<(string fullName, int objectId)> GetStoredProcsThatRefEntity(string tableName)
         {
+            var tables = GetAllTables();
+
+            var objectId = tables.Single(t => string.Equals(getObjectName(t.fullName), 
+                                                            getObjectName(tableName), 
+                                                            StringComparison.OrdinalIgnoreCase)).objectId;
+
             var query = getQueryProcIdsThatReferenceObject(objectId);
             var results = QueryDoubleColumn(query);
             return results;
         }
 
-        public string GetFullObjectName(int objectId)
-        {
-            var query = $"SELECT OBJECT_SCHEMA_NAME({objectId}) + '.' + OBJECT_NAME({objectId}) as object_name";
-            var result = QueryScalar(query);
-            return result;
-        }
 
-
-
-        public List<(string first, int second)> QueryDoubleColumn(string sql)
+        List<(string first, int second)> QueryDoubleColumn(string sql)
         {
             using (var conn = new SqlConnection(connectionString))
             {
@@ -97,7 +87,7 @@ namespace Harp.Core.Utilities
             }
         }
 
-        public List<string> QuerySingleColumn(string sql)
+        List<string> QuerySingleColumn(string sql)
         {
             using (var conn = new SqlConnection(connectionString))
             {
@@ -119,7 +109,7 @@ namespace Harp.Core.Utilities
             }
         }
 
-        public string QueryScalar(string sql)
+        string QueryScalar(string sql)
         {
             using (var conn = new SqlConnection(connectionString))
             {
@@ -134,7 +124,7 @@ namespace Harp.Core.Utilities
             }
         }
 
-        public int Execute(string sql)
+        int Execute(string sql)
         {
             using (var conn = new SqlConnection(connectionString))
             {
@@ -163,15 +153,6 @@ namespace Harp.Core.Utilities
             var components = fullTableName.Split(".", StringSplitOptions.RemoveEmptyEntries);
             return components.Last();
         }
-
-
-        //public string[] GetAllStoredProcNames()
-        //{
-        //    var command = "select * from sys.procedures where [type] = 'P'";
-        //    var results = QuerySingleColumn(command);
-
-        //    return results.ToArray();
-        //}
 
     }
 

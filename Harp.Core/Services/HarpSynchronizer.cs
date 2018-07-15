@@ -11,14 +11,20 @@ namespace Harp.Core.Services
 {
     public class HarpSynchronizer
     {
-        public SynchronizeResult SynchronizeFile(HarpFile mapFile, string sqlConnectionString, out StringBuilder trace)
+        public HarpSynchronizer(ISql sql)
+        {
+            this.sql = sql;
+        }
+
+        ISql sql;
+
+
+        public SynchronizeResult Synchronize(HarpFile mapFile, out StringBuilder trace)
         {
             trace = new StringBuilder();
 
             try
             {
-                var sql = new Sql(sqlConnectionString);
-
                 foreach (var entity in mapFile.Entities)
                 {
                     int? tableId;
@@ -59,37 +65,56 @@ namespace Harp.Core.Services
                     trace.AppendLine($"Table match: {entity.TableName} ({tableId})");
 
                     // Columns
-                    var columnNames = sql.GetColumnNames(tableId.Value);
-
-                    trace.AppendLine($"Columns:");
-                    foreach (var name in columnNames)
-                        trace.AppendLine(" - " + name);
-
-                    foreach (var prop in entity.Properties.Where(p => !p.IsMapped))
+                    if (entity.Properties.Any(p => !p.IsMapped))
                     {
-                        var colMatches = columnNames.Where(c => StringMatcher.IsAFuzzyMatch(c, prop.Name));
+                        var columnNames = sql.GetColumnNames(tableId.Value);
 
-                        if (colMatches.Count() == 1)
-                        {
-                            prop.ColumnName = colMatches.Single();
-                        }
-                        else
-                        {
-                            // Error: Too matches for column
-                            // Error: No matches for column
-                            return SynchronizeResult.ColumnMatchingError;
-                        }
+                        trace.AppendLine($"Columns:");
+                        foreach (var name in columnNames)
+                            trace.AppendLine(" - " + name);
 
+                        foreach (var prop in entity.Properties.Where(p => !p.IsMapped))
+                        {
+                            var colMatches = columnNames.Where(c => StringMatcher.IsAFuzzyMatch(c, prop.Name));
+
+                            if (colMatches.Count() == 1)
+                            {
+                                prop.ColumnName = colMatches.Single();
+                            }
+                            else
+                            {
+                                // Error: Too matches for column
+                                // Error: No matches for column
+                                return SynchronizeResult.ColumnMatchingError;
+                            }
+
+                        }
+                    }
+
+                    // Behaviors
+                    if (entity.Behaviors.Any(b => !b.IsMapped))
+                    {
+                        // All procs that ref entity in db
+                        // Excluding any already mapped procs
+                        var procs = sql.GetStoredProcsThatRefEntity(entity.TableName);
+
+                        foreach (var behavior in entity.Behaviors.Where(b => !b.IsMapped))
+                        {
+                            var availableMatches = procs.Where(p => !entity.Behaviors.Any(b => b.StoredProcName == p.fullName));
+
+                            var matches = availableMatches.Select(p => new ProcName(p.fullName))
+                                                          .OrderByDescending(p => stringCompareScore(behavior.Name, p.HumanizedName))
+                                                          .ToArray();
+
+                            behavior.StoredProcName = matches.First().FullName;
+                        }
                     }
 
                 }
 
-                return SynchronizeResult.OK;
-
-                // TODO: Uncomment when behaviours are syncing correctly
-                //return mapFile.Entities.All(e => e.IsFullyMapped) 
-                //    ? SynchronizeResult.OK 
-                //    : SynchronizeResult.UnknownError;
+                return mapFile.Entities.All(e => e.IsFullyMapped)
+                    ? SynchronizeResult.OK
+                    : SynchronizeResult.UnknownError;
             }
             catch (Exception ex)
             {
@@ -144,6 +169,119 @@ namespace " + rootNamespace + @"
 
             var components = fullTableName.Split(".", StringSplitOptions.RemoveEmptyEntries);
             return components.Last();
+        }
+
+        double stringCompareScore(string word, string abbrv, double fuzzines = 0)
+        {
+            double total_char_score = 0, abbrv_size = abbrv.Length,
+                fuzzies = 1, final_score, abbrv_score;
+            int word_size = word.Length;
+            bool start_of_word_bonus = false;
+
+            //If strings are equal, return 1.0
+            if (word == abbrv) return 1.0;
+
+            int index_in_string,
+                index_char_lowercase,
+                index_char_uppercase,
+                min_index;
+            double char_score;
+            string c;
+            for (int i = 0; i < abbrv_size; i++)
+            {
+                c = abbrv[i].ToString();
+                index_char_uppercase = word.IndexOf(c.ToUpper());
+                index_char_lowercase = word.IndexOf(c.ToLower());
+                min_index = Math.Min(index_char_lowercase, index_char_uppercase);
+
+                //Finds first valid occurrence
+                //In upper or lowercase
+                index_in_string = min_index > -1 ?
+                    min_index : Math.Max(index_char_lowercase, index_char_uppercase);
+
+                //If no value is found
+                //Check if fuzzines is allowed
+                if (index_in_string == -1)
+                {
+                    if (fuzzines > 0)
+                    {
+                        fuzzies += 1 - fuzzines;
+                        continue;
+                    }
+                    else return 0;
+                }
+                else
+                    char_score = 0.1;
+
+                //Check if current char is the same case
+                //Then add bonus
+                if (word[index_in_string].ToString() == c) char_score += 0.1;
+
+                //Check if char matches the first letter
+                //And add bonnus for consecutive letters
+                if (index_in_string == 0)
+                {
+                    char_score += 0.6;
+
+                    //Check if the abbreviation
+                    //is in the start of the word
+                    start_of_word_bonus = i == 0;
+                }
+                else
+                {
+                    // Acronym Bonus
+                    // Weighing Logic: Typing the first character of an acronym is as if you
+                    // preceded it with two perfect character matches.
+                    if (word.ElementAtOrDefault(index_in_string - 1).ToString() == " ") char_score += 0.8;
+                }
+
+
+                //Remove the start of string, so we don't reprocess it
+                word = word.Substring(index_in_string + 1);
+
+                //sum chars scores
+                total_char_score += char_score;
+            }
+
+            abbrv_score = total_char_score / abbrv_size;
+
+            //Reduce penalty for longer words
+            final_score = ((abbrv_score * (abbrv_size / word_size)) + abbrv_score) / 2;
+
+            //Reduce using fuzzies;
+            final_score = final_score / fuzzies;
+
+            //Process start of string bonus
+            if (start_of_word_bonus && final_score <= 0.85)
+                final_score += 0.15;
+
+            return final_score;
+        }
+
+
+        class ProcName
+        {
+            public ProcName(string fullName)
+            {
+                FullName = fullName;
+
+                if (FullName.Contains("."))
+                {
+                    var components = FullName.Split(".", StringSplitOptions.RemoveEmptyEntries);
+                    ShortName = components.Last();
+                }
+                else
+                {
+                    ShortName = FullName;
+                }
+
+                HumanizedName = ShortName.Humanize();
+
+            }
+
+            public string FullName { get; set; }
+            public string ShortName { get; set; }
+            public string HumanizedName { get; set; }
         }
 
         public enum SynchronizeResult

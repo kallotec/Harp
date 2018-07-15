@@ -12,7 +12,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Harp.Core", "Harp.Core\Harp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Harp.Cmdline", "Harp.Cmdline\Harp.Cmdline.csproj", "{A6849679-BBA0-4157-B661-5DEF04DD0E4B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harp.Tests", "Harp.Tests\Harp.Tests.csproj", "{CC297CD3-C107-42BA-918F-23FC8EF2EE18}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harp.Tests", "Harp.Tests\Harp.Tests.csproj", "{378DD139-5FCC-4FEF-905B-C7A503E38084}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,10 +28,10 @@ Global
 		{A6849679-BBA0-4157-B661-5DEF04DD0E4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6849679-BBA0-4157-B661-5DEF04DD0E4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6849679-BBA0-4157-B661-5DEF04DD0E4B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CC297CD3-C107-42BA-918F-23FC8EF2EE18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{378DD139-5FCC-4FEF-905B-C7A503E38084}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{378DD139-5FCC-4FEF-905B-C7A503E38084}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{378DD139-5FCC-4FEF-905B-C7A503E38084}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{378DD139-5FCC-4FEF-905B-C7A503E38084}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,3 +9,4 @@
 - https://github.com/Humanizr/Humanizer
 - https://github.com/StackExchange/Dapper
 - https://github.com/aaubry/YamlDotNet
+- https://github.com/bltavares/ScoreSharp

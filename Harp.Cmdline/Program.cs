@@ -1,4 +1,5 @@
 ﻿using Harp.Core.Services;
+using Harp.Core.Utilities;
 using System;
 using System.IO;
 using System.Text;
@@ -25,8 +26,8 @@ namespace Harp.Cmdline
                     return;
 
                 // synchronize
-                var sync = new HarpSynchronizer();
-                var sResult = sync.SynchronizeFile(rResult.map, getSqlConnectionString(), out trace);
+                var sync = new HarpSynchronizer(new Sql(getSqlConnectionString()));
+                var sResult = sync.Synchronize(rResult.map, out trace);
                 Console.WriteLine($"Sync: {sResult}");
 
                 if (sResult != HarpSynchronizer.SynchronizeResult.OK)
