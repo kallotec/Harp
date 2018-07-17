@@ -19,9 +19,10 @@ namespace Harp.Core.Services
         ISql sql;
 
 
-        public SynchronizeResult Synchronize(HarpFile mapFile, out StringBuilder trace)
+        public SyncResults Synchronize(HarpFile mapFile, out StringBuilder trace)
         {
             trace = new StringBuilder();
+            var results = new SyncResults();
 
             try
             {
@@ -43,12 +44,14 @@ namespace Harp.Core.Services
                         if (matches.Count() > 1)
                         {
                             // Error: too many matches, can't decide.
-                            return SynchronizeResult.EntityNameMatchesTooManyTables;
+                            results.Code = SynchronizeResultCode.EntityNameMatchesTooManyTables;
+                            return results;
                         }
                         else if (matches.Count() == 0)
                         {
                             // Error: no matches
-                            return SynchronizeResult.EntityNameMatchesNoTables;
+                            results.Code = SynchronizeResultCode.EntityNameMatchesNoTables;
+                            return results;
                         }
 
                         var tableMatch = matches.Single();
@@ -60,7 +63,10 @@ namespace Harp.Core.Services
 
                     tableId = sql.GetTableObjectId(entity.TableName);
                     if (tableId == null)
-                        return SynchronizeResult.MatchedTableDoesNotExist;
+                    {
+                        results.Code = SynchronizeResultCode.MatchedTableDoesNotExist;
+                        return results;
+                    }
 
                     trace.AppendLine($"Table match: {entity.TableName} ({tableId})");
 
@@ -85,43 +91,61 @@ namespace Harp.Core.Services
                             {
                                 // Error: Too matches for column
                                 // Error: No matches for column
-                                return SynchronizeResult.ColumnMatchingError;
+                                results.Code = SynchronizeResultCode.ColumnMatchingError;
+                                return results;
                             }
 
                         }
+
+                        // Track the unmapped
+                        var unmappedCols = columnNames.Except(entity.Properties.Select(p => p.ColumnName));
+                        results.UnmappedTableColumns.AddRange(unmappedCols);
                     }
 
                     // Behaviors
                     if (entity.Behaviors.Any(b => !b.IsMapped))
                     {
                         // All procs that ref entity in db
-                        // Excluding any already mapped procs
                         var procs = sql.GetStoredProcsThatRefEntity(entity.TableName);
 
                         foreach (var behavior in entity.Behaviors.Where(b => !b.IsMapped))
                         {
+                            // Excluding any procs already mapped
                             var availableMatches = procs.Where(p => !entity.Behaviors.Any(b => b.StoredProcName == p.fullName));
 
                             var matches = availableMatches.Select(p => new ProcName(p.fullName))
-                                                          .OrderByDescending(p => stringCompareScore(behavior.Name, p.HumanizedName))
-                                                          .ToArray();
+                                                          .OrderByDescending(p =>
+                                                          {
+                                                              // Remove entity name from proc's name, to make it more likely to get matched
+                                                              // since there's less character changes required for a total match.
+                                                              // e.g. 1 = get dogs by id = get by id (becomes the most closest match)
+                                                              //      2 = get cats by id = get cats by id
+                                                              var processed = p.HumanizedName.Replace(entity.EntityName, string.Empty);
+                                                              return stringCompareScore(behavior.Name, processed);
+                                                          }).ToArray();
 
                             behavior.StoredProcName = matches.First().FullName;
                         }
+
+                        // Track the unmapped
+                        var unmappedCols = procs.Select(p => p.fullName)
+                                                .Except(entity.Behaviors.Select(b => b.StoredProcName));
+                        results.UnmappedStoredProcs.AddRange(unmappedCols);
                     }
 
                 }
 
-                return mapFile.Entities.All(e => e.IsFullyMapped)
-                    ? SynchronizeResult.OK
-                    : SynchronizeResult.UnknownError;
+                results.Code = mapFile.Entities.All(e => e.IsFullyMapped) 
+                    ? SynchronizeResultCode.OK 
+                    : SynchronizeResultCode.UnknownError;
             }
             catch (Exception ex)
             {
                 trace.AppendLine($"{ex.GetType().Name}: {ex.ToString()}");
-                return SynchronizeResult.UnknownError;
+                results.Code = SynchronizeResultCode.UnknownError;
             }
 
+            return results;
         }
 
         string generateEntityClass(string tableName, string rootNamespace, string[] columnNames)
@@ -284,7 +308,7 @@ namespace " + rootNamespace + @"
             public string HumanizedName { get; set; }
         }
 
-        public enum SynchronizeResult
+        public enum SynchronizeResultCode
         {
             UnknownError,
             OK,
@@ -292,6 +316,29 @@ namespace " + rootNamespace + @"
             EntityNameMatchesNoTables,
             MatchedTableDoesNotExist,
             ColumnMatchingError,
+        }
+
+        public class SyncResults
+        {
+            public SyncResults()
+            {
+                UnmappedTableColumns = new List<string>();
+                UnmappedStoredProcs = new List<string>();
+            }
+            public SyncResults(SynchronizeResultCode Code) : this()
+            {
+                this.Code = Code;
+            }
+
+            public SynchronizeResultCode Code { get; set; }
+            public List<string> UnmappedTableColumns { get; private set; }
+            public List<string> UnmappedStoredProcs { get; private set; }
+
+            public static SyncResults Create(SynchronizeResultCode Code)
+            {
+                return new SyncResults(Code);
+            }
+
         }
 
     }

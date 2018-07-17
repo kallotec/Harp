@@ -10,12 +10,11 @@ namespace Harp.Cmdline
     {
         static void Main(string[] args)
         {
+            StringBuilder trace;
             try
             {
                 var harpFilePath = Path.Combine(Environment.CurrentDirectory, "Objects.harp");
                 Console.WriteLine(harpFilePath);
-
-                StringBuilder trace;
 
                 // read
                 var reader = new HarpFileReader();
@@ -28,9 +27,9 @@ namespace Harp.Cmdline
                 // synchronize
                 var sync = new HarpSynchronizer(new Sql(getSqlConnectionString()));
                 var sResult = sync.Synchronize(rResult.map, out trace);
-                Console.WriteLine($"Sync: {sResult}");
+                Console.WriteLine($"Sync: {sResult.Code}");
 
-                if (sResult != HarpSynchronizer.SynchronizeResult.OK)
+                if (sResult.Code != HarpSynchronizer.SynchronizeResultCode.OK)
                     return;
 
                 // write

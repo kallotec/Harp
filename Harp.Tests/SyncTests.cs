@@ -75,10 +75,10 @@ namespace Harp.Tests
 
 
             // Act
-            sync.Synchronize(harpFile, out trace);
+            var results = sync.Synchronize(harpFile, out trace);
 
             // Assert
-            Assert.IsTrue(harpFile.Entities[0].IsFullyMapped);
+            Assert.IsTrue(harpFile.IsFullyMapped);
 
         }
     }
