@@ -1,6 +1,9 @@
-﻿using Harp.Core.Services;
+﻿using Harp.Core.Infrastructure;
+using Harp.Core.Models;
+using Harp.Core.Services;
 using Harp.Core.Utilities;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -10,50 +13,57 @@ namespace Harp.Cmdline
     {
         static void Main(string[] args)
         {
-            StringBuilder trace;
+            var trace = new StringBuilder();
             try
             {
                 var harpFilePath = Path.Combine(Environment.CurrentDirectory, "Objects.harp");
                 Console.WriteLine(harpFilePath);
 
-                // read
-                var reader = new HarpFileReader();
-                var rResult = reader.Read(harpFilePath, out trace);
-                Console.WriteLine($"Read: {rResult.code}");
+                var harpYaml = File.ReadAllText(harpFilePath);
 
-                if (rResult.code != HarpFileReader.ReadResult.OK)
+                // parse
+
+                //var testFile = new HarpFile();
+                //testFile.Config.OutputDirectory = "Generated/";
+                //testFile.Config.SqlConnectionString = "Server=.\\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;";
+                //testFile.Entities.Add(new Entity
+                //{
+                //    Name = "Dogs",
+                //    Table = "dbo.Dogs"
+                //});
+
+                var harpFile = HarpFile.FromYaml(harpYaml);
+                if (harpFile == null)
+                {
+                    Console.WriteLine("Invalid harp file format");
                     return;
+                }
 
                 // synchronize
-                var sync = new HarpSynchronizer(new Sql(getSqlConnectionString()));
-                var sResult = sync.Synchronize(rResult.map, out trace);
+                var sync = new HarpSynchronizer(new Sql(), trace);
+                var sResult = sync.Synchronize(harpFile);
                 Console.WriteLine($"Sync: {sResult.Code}");
 
                 if (sResult.Code != HarpSynchronizer.SynchronizeResultCode.OK)
                     return;
 
-                // write
-                var writer = new HarpFileWriter();
-                var wResult = writer.Write(rResult.map, harpFilePath, out trace);
-                Console.WriteLine($"Write: {wResult}");
-
-                if (wResult != HarpFileWriter.WriteResult.OK)
-                    return;
-
-                Console.WriteLine($"----- TRACE -----");
-                Console.WriteLine(trace.ToString());
-                Console.WriteLine($"-----------------");
+                if (sResult.WasUpdated)
+                {
+                    var newFileContents = harpFile.GenerateYaml();
+                    File.WriteAllText(harpFilePath, newFileContents);
+                }
 
             }
             finally
             {
-                Console.ReadLine();
+                Console.WriteLine($"----- TRACE -----");
+                Console.WriteLine(trace.ToString());
+                Console.WriteLine($"-----------------");
 
+                Console.ReadLine();
             }
 
         }
-
-        static string getSqlConnectionString() => "Server=.\\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;";
 
     }
 }

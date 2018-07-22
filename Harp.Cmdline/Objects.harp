@@ -1,11 +1,24 @@
-
-Dog:
-  Table: dbo.Dogs
-  Properties:
-  - ID: id
-  - Name: name
-  - Age: age
-  Behaviors:
-  - Get by ID: dbo.test1
-  - Get all: 
-  - Save: dbo.test3
+config:
+  sqlConnectionString: Server=.\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;
+  outputDirectory: Generated/
+entities:
+- name: Dogs
+  table: dbo.Dogs
+  properties:
+  - name: Id
+    column: id
+  - name: Name
+    column: name
+  - name: Age
+    column: age
+  behaviors:
+  - name: Delete
+    proc: dbo.delete
+  - name: Insert
+    proc: dbo.DogInsert
+  - name: Get all
+    proc: dbo.GetAll
+  - name: Get by id
+    proc: dbo.GetDogsById
+  - name: Update
+    proc: dbo.UpdateDog

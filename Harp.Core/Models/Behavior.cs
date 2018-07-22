@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using YamlDotNet.Serialization;
 
 namespace Harp.Core.Models
 {
     public class Behavior
     {
         public string Name { get; set; }
-        public string StoredProcName { get; set; }
-        public bool IsMapped => !string.IsNullOrWhiteSpace(StoredProcName);
+        public string Proc { get; set; }
+        [YamlIgnore]
+        public bool IsMapped => !string.IsNullOrWhiteSpace(Proc);
     }
 }

@@ -1,3 +1,4 @@
+using Harp.Core.Infrastructure;
 using Harp.Core.Models;
 using Harp.Core.Services;
 using Harp.Core.Utilities;
@@ -42,24 +43,24 @@ namespace Harp.Tests
             sqlMock.Setup(m => m.GetTableObjectId(It.IsAny<string>()))
                    .Returns(() => new int?(1));
 
-            var sync = new HarpSynchronizer(sqlMock.Object);
+            var sync = new HarpSynchronizer(sqlMock.Object, new StringBuilder());
 
             var harpFile = new HarpFile();
             harpFile.Entities.Add(new Entity
             {
-                EntityName = "Dogs",
-                TableName = "",                 // blank
+                Name = "Dogs",
+                Table = "",                 // blank
                 Properties = new List<Property>
                 {
                     new Property
                     {
                         Name = "ID",
-                        ColumnName = ""         // blank
+                        Column = ""         // blank
                     },
                     new Property
                     {
                         Name = "Name",
-                        ColumnName = ""         // blank
+                        Column = ""         // blank
                     }
                 },
                 Behaviors = new List<Behavior>
@@ -67,7 +68,7 @@ namespace Harp.Tests
                     new Behavior
                     {
                         Name = "Get by id",
-                        StoredProcName = ""     // blank
+                        Proc = ""     // blank
                     }
                 }
 
@@ -75,7 +76,7 @@ namespace Harp.Tests
 
 
             // Act
-            var results = sync.Synchronize(harpFile, out trace);
+            var results = sync.Synchronize(harpFile);
 
             // Assert
             Assert.IsTrue(harpFile.IsFullyMapped);

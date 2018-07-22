@@ -7,7 +7,7 @@ using System.Data.SqlClient;
 using System.Text;
 using Dapper;
 
-namespace Harp.Core.Utilities
+namespace Harp.Core.Infrastructure
 {
     /*
      * TODO: Use Dapper
@@ -15,13 +15,39 @@ namespace Harp.Core.Utilities
 
     public class Sql : ISql
     {
-        public Sql(string connectionString)
-        {
-            this.connectionString = connectionString;
-        }
+        public Sql() { }
 
+        bool isConfigured => (!string.IsNullOrWhiteSpace(connectionString));
         string connectionString;
 
+
+        public bool ConfigureAndTest(string connString)
+        {
+            try
+            {
+                this.connectionString = connString;
+
+                var tables = GetAllTables();
+                var tableName = "dbo.test";
+                var tableId = 1;
+                if (tables.Any())
+                {
+                    var table = tables.First();
+                    tableName = table.fullName;
+                    tableId = table.objectId;
+                }
+                var cols = GetColumnNames(tableId);
+                var procs = GetStoredProcsThatRefEntity(tableName);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // don't remember an invalid conn string
+                this.connectionString = null;
+                return false;
+            }
+        }
 
         public int? GetTableObjectId(string fullTableName)
         {
@@ -56,11 +82,12 @@ namespace Harp.Core.Utilities
         {
             var tables = GetAllTables();
 
-            var objectId = tables.Single(t => string.Equals(getObjectName(t.fullName), 
-                                                            getObjectName(tableName), 
-                                                            StringComparison.OrdinalIgnoreCase)).objectId;
+            var objectFullName = tables.Single(t => string.Equals(getObjectName(t.fullName), 
+                                               getObjectName(tableName), 
+                                               StringComparison.OrdinalIgnoreCase))
+                                               .fullName;
 
-            var query = getQueryProcIdsThatReferenceObject(objectId);
+            var query = getQueryProcIdsThatReferenceObject(objectFullName);
             var results = QueryDoubleColumn(query);
             return results;
         }
@@ -68,6 +95,9 @@ namespace Harp.Core.Utilities
 
         List<(string first, int second)> QueryDoubleColumn(string sql)
         {
+            if (!isConfigured)
+                throw new InvalidOperationException("Not configured");
+
             using (var conn = new SqlConnection(connectionString))
             {
                 using (var cmd = conn.CreateCommand())
@@ -89,6 +119,9 @@ namespace Harp.Core.Utilities
 
         List<string> QuerySingleColumn(string sql)
         {
+            if (!isConfigured)
+                throw new InvalidOperationException("Not configured");
+
             using (var conn = new SqlConnection(connectionString))
             {
                 using (var cmd = conn.CreateCommand())
@@ -111,6 +144,9 @@ namespace Harp.Core.Utilities
 
         string QueryScalar(string sql)
         {
+            if (!isConfigured)
+                throw new InvalidOperationException("Not configured");
+
             using (var conn = new SqlConnection(connectionString))
             {
                 using (var cmd = conn.CreateCommand())
@@ -126,6 +162,9 @@ namespace Harp.Core.Utilities
 
         int Execute(string sql)
         {
+            if (!isConfigured)
+                throw new InvalidOperationException("Not configured");
+
             using (var conn = new SqlConnection(connectionString))
             {
                 using (var cmd = conn.CreateCommand())
@@ -139,9 +178,9 @@ namespace Harp.Core.Utilities
             }
         }
 
-        string getQueryProcIdsThatReferenceObject(int objectId)
+        string getQueryProcIdsThatReferenceObject(string objectFullName)
         {
-            var query = @"select (referencing_schema_name + '.' + referencing_entity_name), referencing_id from sys.dm_sql_referencing_entities (object_name(" + objectId + "), 'OBJECT')";
+            var query = "select (referencing_schema_name + '.' + referencing_entity_name), referencing_id from sys.dm_sql_referencing_entities ('" + objectFullName + "', 'OBJECT')";
             return query;
         }
 
