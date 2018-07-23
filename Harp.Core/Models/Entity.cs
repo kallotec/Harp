@@ -13,7 +13,8 @@ namespace Harp.Core.Models
         public List<Property> Properties { get; set; } = new List<Property>();
         public List<Behavior> Behaviors { get; set; } = new List<Behavior>();
         [YamlIgnore]
-        public bool IsFullyMapped => (Properties.All(p => p.IsMapped) && Behaviors.All(b => b.IsMapped));
+        public bool IsFullyMapped => (Properties.Any() && Properties.All(p => p.IsMapped) &&
+                                      Behaviors.Any() && Behaviors.All(b => b.IsMapped));
 
         public string GenerateHarpFileFragment()
         {
@@ -30,6 +31,10 @@ namespace Harp.Core.Models
 ";
         }
 
+        public override string ToString()
+        {
+            return $"{Name ?? "(unknown)"} ({Table ?? "(unknown)"}) Props: {Properties.Count} Behaviors: {Behaviors.Count}";
+        }
     }
 
 }

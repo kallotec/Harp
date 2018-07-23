@@ -1,24 +1,20 @@
-config:
-  sqlConnectionString: Server=.\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;
-  outputDirectory: Generated/
-entities:
-- name: Dogs
-  table: dbo.Dogs
-  properties:
-  - name: Id
-    column: id
-  - name: Name
-    column: name
-  - name: Age
-    column: age
-  behaviors:
-  - name: Delete
-    proc: dbo.delete
-  - name: Insert
-    proc: dbo.DogInsert
-  - name: Get all
-    proc: dbo.GetAll
-  - name: Get by id
-    proc: dbo.GetDogsById
-  - name: Update
-    proc: dbo.UpdateDog
+Config:
+  SqlConnectionString: Server=.\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;
+  OutputDirectory: Generated/
+
+Dog: 
+  Table: dbo.Dogs
+  Properties:
+  - Id: id
+  - Name: name
+  - Age: age
+  Behaviors:
+  - Delete: dbo.delete
+  - Insert: dbo.DogInsert
+  - Get all: dbo.GetAll
+  - Get by id: dbo.GetDogsById
+  - Update: dbo.UpdateDog
+
+Cat:
+
+Fox:

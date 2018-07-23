@@ -11,5 +11,7 @@ namespace Harp.Core.Models
         public string Column { get; set; }
         [YamlIgnore]
         public bool IsMapped => !string.IsNullOrWhiteSpace(Column);
+
+        public override string ToString() => $"{Name ?? "(empty)"} ({Column ?? "(empty)"})";
     }
 }

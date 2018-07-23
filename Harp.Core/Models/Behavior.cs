@@ -11,5 +11,7 @@ namespace Harp.Core.Models
         public string Proc { get; set; }
         [YamlIgnore]
         public bool IsMapped => !string.IsNullOrWhiteSpace(Proc);
+
+        public override string ToString() => $"{Name ?? "(empty)"} ({Proc ?? "(empty)"})";
     }
 }

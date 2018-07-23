@@ -21,37 +21,27 @@ namespace Harp.Cmdline
 
                 var harpYaml = File.ReadAllText(harpFilePath);
 
-                // parse
+                var parser = new HarpYamlParser();
 
-                //var testFile = new HarpFile();
-                //testFile.Config.OutputDirectory = "Generated/";
-                //testFile.Config.SqlConnectionString = "Server=.\\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;";
-                //testFile.Entities.Add(new Entity
-                //{
-                //    Name = "Dogs",
-                //    Table = "dbo.Dogs"
-                //});
+                var parseResult = parser.Parse(harpYaml);
+                Console.WriteLine($"Parse: {parseResult.code}");
 
-                var harpFile = HarpFile.FromYaml(harpYaml);
-                if (harpFile == null)
-                {
-                    Console.WriteLine("Invalid harp file format");
+                if (parseResult.code != HarpYamlParser.ParseResult.OK)
                     return;
-                }
 
                 // synchronize
                 var sync = new HarpSynchronizer(new Sql(), trace);
-                var sResult = sync.Synchronize(harpFile);
+                var sResult = sync.Synchronize(parseResult.file);
                 Console.WriteLine($"Sync: {sResult.Code}");
 
                 if (sResult.Code != HarpSynchronizer.SynchronizeResultCode.OK)
                     return;
 
-                if (sResult.WasUpdated)
-                {
-                    var newFileContents = harpFile.GenerateYaml();
-                    File.WriteAllText(harpFilePath, newFileContents);
-                }
+                //if (sResult.WasUpdated)
+                //{
+                //    var newFileContents = parseResult.file.GenerateYaml();
+                //    File.WriteAllText(harpFilePath, newFileContents);
+                //}
 
             }
             finally

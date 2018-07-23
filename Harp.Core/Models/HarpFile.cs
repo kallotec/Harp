@@ -13,7 +13,7 @@ namespace Harp.Core.Models
         public HarpConfig Config { get; set; } = new HarpConfig();
         public List<Entity> Entities { get; set; } = new List<Entity>();
         [YamlIgnore]
-        public bool IsFullyMapped => Entities.All(e => e.IsFullyMapped);
+        public bool IsFullyMapped => (Config.IsFullyMapped && Entities.All(e => e.IsFullyMapped));
 
         public static HarpFile FromYaml(string harpYaml)
         {
@@ -49,14 +49,14 @@ namespace Harp.Core.Models
             }
         }
 
+        public class HarpConfig
+        {
+            public string SqlConnectionString { get; set; }
+            public string OutputDirectory { get; set; }
+            [YamlIgnore]
+            public bool IsFullyMapped => (!string.IsNullOrWhiteSpace(SqlConnectionString) &&
+                                         !string.IsNullOrWhiteSpace(SqlConnectionString));
+        }
     }
 
-    public class HarpConfig
-    {
-        public string SqlConnectionString { get; set; }
-        public string OutputDirectory { get; set; }
-        [YamlIgnore]
-        public bool IsFullyMapped => (!string.IsNullOrWhiteSpace(SqlConnectionString) &&
-                                     !string.IsNullOrWhiteSpace(SqlConnectionString));
-    }
 }
