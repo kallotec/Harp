@@ -35,9 +35,10 @@ namespace Harp.Core.Services
                     return results;
                 }
 
-                foreach (var entity in mapFile.Entities)
+                foreach (var entry in mapFile.Entities)
                 {
                     int? tableId;
+                    var entity = entry.Value;
 
                     // Table
                     if (string.IsNullOrWhiteSpace(entity.Table))
@@ -80,28 +81,28 @@ namespace Harp.Core.Services
 
                     var columnsForEntity = sql.GetColumnNames(tableId.Value);
 
-                    // Columns, mapped
-                    var allExistingMappedColumnsExist = entity.Properties.All(p => columnsForEntity.Any(c => string.Equals(c, p.Column, StringComparison.OrdinalIgnoreCase)));
-                    if (!allExistingMappedColumnsExist)
-                    {
-                        results.Code = SynchronizeResultCode.MatchedColumnDoesNotExist;
-                        return results;
-                    }
-
                     // Columns, unmapped
-                    if (entity.Properties.Any(p => !p.IsMapped))
+                    if (entity.Properties.Any(p => string.IsNullOrWhiteSpace(p.Value)))
                     {
-                        foreach (var prop in entity.Properties.Where(p => !p.IsMapped))
+                        for (int x = 0; x < entity.Properties.Count; x++)
                         {
+                            var propEntry = entity.Properties.ElementAt(x);
+
                             // Excludes any already mapped
-                            var availableMatches = columnsForEntity.Where(c => !entity.Properties.Any(p => p.Column == c));
-                            var matches = availableMatches.Where(c => StringMatcher.IsAFuzzyMatch(c, prop.Name));
+                            if (propEntry.Value != null)
+                                continue;
+
+                            var prop = propEntry.Value;
+
+                            var availableMatches = columnsForEntity.Where(c => !entity.Properties.Any(p => p.Value == c));
+                            var matches = availableMatches.Where(c => StringMatcher.IsAFuzzyMatch(c, propEntry.Key));
 
                             if (matches.Any())
                             {
-                                prop.Column = matches.First();
+                                var match = matches.First();
+                                entity.Properties[propEntry.Key] = match;
                                 results.WasUpdated = true;
-                                trace.AppendLine($"Property match: {prop.Name} = {prop.Column}");
+                                trace.AppendLine($"Property match: {propEntry.Key} = {match}");
                             }
                             else
                             {
@@ -113,7 +114,7 @@ namespace Harp.Core.Services
                         }
 
                         // Track the unmapped
-                        var unmappedCols = columnsForEntity.Except(entity.Properties.Select(p => p.Column));
+                        var unmappedCols = columnsForEntity.Except(entity.Properties.Select(p => p.Value));
                         results.UnmappedTableColumns.AddRange(unmappedCols);
                     }
                     else if (entity.Properties.Count() == 0)
@@ -122,34 +123,38 @@ namespace Harp.Core.Services
                         foreach (var column in columnsForEntity)
                         {
                             var humanName = column.Humanize();
-                            entity.Properties.Add(new Property
-                            {
-                                Column = column,
-                                Name = humanName
-                            });
+                            entity.AddProperty(humanName, column);
 
                             results.WasUpdated = true;
                             trace.AppendLine($"Property match: {humanName} = {column}");
                         }
                     }
 
-                    var procsForEntity = sql.GetStoredProcsThatRefEntity(entity.Table);
-
-                    // Behaviors, mapped
-                    var allExistingMappedProcsExist = entity.Behaviors.All(b => procsForEntity.Any(pr => string.Equals(pr.fullName, b.Proc, StringComparison.OrdinalIgnoreCase)));
-                    if (!allExistingMappedProcsExist)
+                    // Columns, mapped
+                    var allExistingMappedColumnsExist = entity.Properties.All(p => columnsForEntity.Any(c => string.Equals(c, p.Value, StringComparison.OrdinalIgnoreCase)));
+                    if (!allExistingMappedColumnsExist)
                     {
-                        results.Code = SynchronizeResultCode.MatchedProcDoesNotExist;
+                        results.Code = SynchronizeResultCode.MatchedColumnDoesNotExist;
                         return results;
                     }
 
+
+                    var procsForEntity = sql.GetStoredProcsThatRefEntity(entity.Table);
+
                     // Behaviours, unmapped
-                    if (entity.Behaviors.Any(b => !b.IsMapped))
+                    if (entity.Behaviors.Any(b => string.IsNullOrWhiteSpace(b.Value)))
                     {
-                        foreach (var behavior in entity.Behaviors.Where(b => !b.IsMapped))
+                        for (int x = 0; x < entity.Behaviors.Count; x++)
                         {
+                            var behaveEntry = entity.Behaviors.ElementAt(x);
+
+                            if (behaveEntry.Value != null)
+                                continue;
+
+                            var behavior = behaveEntry.Value;
+
                             // Excludes any already mapped
-                            var availableMatches = procsForEntity.Where(p => !entity.Behaviors.Any(b => b.Proc == p.fullName));
+                            var availableMatches = procsForEntity.Where(p => !entity.Behaviors.Any(b => b.Value == p.fullName));
 
                             var matches = availableMatches.Select(p => new ProcName(p.fullName))
                                                           .OrderByDescending(p =>
@@ -159,20 +164,29 @@ namespace Harp.Core.Services
                                                               // e.g. 1 = get dogs by id = get by id (becomes the most closest match)
                                                               //      2 = get cats by id = get cats by id
                                                               var processed = p.HumanizedName.Replace((" " + entity.Name + " "), string.Empty);
-                                                              return stringCompareScore(behavior.Name, processed);
+                                                              return stringCompareScore(behaveEntry.Key, processed);
                                                           }).ToArray();
                             if (matches.Any())
                             {
-                                behavior.Proc = matches.First().FullName;
+                                var match = matches.First().FullName;
+                                entity.Behaviors[behaveEntry.Key] = match;
                                 results.WasUpdated = true;
-                                trace.AppendLine($"Behavior match: {behavior.Name} = {behavior.Proc}");
+                                trace.AppendLine($"Behavior match: {behaveEntry.Key} = {match}");
                             }
                         }
 
                         // Track the unmapped
                         var unmappedCols = procsForEntity.Select(p => p.fullName)
-                                                .Except(entity.Behaviors.Select(b => b.Proc));
+                                                .Except(entity.Behaviors.Select(b => b.Value));
                         results.UnmappedStoredProcs.AddRange(unmappedCols);
+
+                        var allExistingMappedProcsExist = entity.Behaviors.All(b => procsForEntity.Any(pr => string.Equals(pr.fullName, b.Value, StringComparison.OrdinalIgnoreCase)));
+                        if (!allExistingMappedProcsExist)
+                        {
+                            results.Code = SynchronizeResultCode.MatchedProcDoesNotExist;
+                            return results;
+                        }
+
                     }
                     else if (entity.Behaviors.Count() == 0)
                     {
@@ -180,12 +194,14 @@ namespace Harp.Core.Services
                         foreach (var proc in procsForEntity)
                         {
                             var humanName = removeWord(entity.Name, getObjectName(proc.fullName).Humanize()).Humanize();
-                            entity.Behaviors.Add(new Behavior
-                            {
-                                Name = humanName,
-                                Proc = proc.fullName
-                            });
 
+                            if (string.IsNullOrWhiteSpace(humanName))
+                            {
+                                results.Code = SynchronizeResultCode.ProcMatchingError;
+                                return results;
+                            }
+
+                            entity.AddBehavior(humanName, proc.fullName);
                             results.WasUpdated = true;
                             trace.AppendLine($"Behavior match: {humanName} = {proc}");
                         }
@@ -193,8 +209,8 @@ namespace Harp.Core.Services
 
                 }
 
-                results.Code = mapFile.Entities.All(e => e.IsFullyMapped) 
-                    ? SynchronizeResultCode.OK 
+                results.Code = mapFile.Entities.All(e => e.Value.IsFullyMapped)
+                    ? SynchronizeResultCode.OK
                     : SynchronizeResultCode.NotAllMapped;
             }
             catch (Exception ex)
@@ -261,15 +277,16 @@ namespace " + rootNamespace + @"
                 needle
             };
 
-            foreach (var variation in variations)
+            foreach (var variation in variations.Where(v => !string.IsNullOrWhiteSpace(v)))
             {
-                if (haystack.StartsWith(variation + " ", StringComparison.OrdinalIgnoreCase))
+                if (haystack.StartsWith(variation + " ", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(haystack))
                     haystack = haystack.Substring(variation.Length);
 
-                if (haystack.EndsWith(" " + variation, StringComparison.OrdinalIgnoreCase))
+                if (haystack.EndsWith(" " + variation, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(haystack))
                     haystack = haystack.Substring(0, (haystack.Length - (variation.Length + 1)));
 
-                haystack = haystack.Replace(variation, " ", StringComparison.OrdinalIgnoreCase);
+                if (!string.IsNullOrWhiteSpace(haystack))
+                    haystack = haystack.Replace(variation, " ", StringComparison.OrdinalIgnoreCase);
             }
 
             return haystack;
@@ -401,6 +418,7 @@ namespace " + rootNamespace + @"
             MatchedColumnDoesNotExist,
             MatchedProcDoesNotExist,
             ColumnMatchingError,
+            ProcMatchingError,
         }
 
         public class SyncResults

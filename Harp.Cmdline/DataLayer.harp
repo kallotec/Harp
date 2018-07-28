@@ -1,0 +1,17 @@
+Config:
+  SqlConnectionString: Server=.\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;
+  OutputDirectory: asdf
+
+Entities:
+  Dogs:
+    Table: dbo.Dogs
+    Properties:
+      Id: id
+      Name: name
+      Age: age
+    Behaviors:
+      Delete: dbo.delete
+      Insert: dbo.DogInsert
+      Get all: dbo.GetAll
+      Get by id: dbo.GetDogsById
+      Update: dbo.UpdateDog

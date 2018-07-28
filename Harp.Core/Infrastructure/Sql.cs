@@ -154,7 +154,7 @@ namespace Harp.Core.Infrastructure
                     conn.Open();
                     cmd.CommandText = sql;
                     cmd.CommandType = System.Data.CommandType.Text;
-                    var scalarValue = cmd.ExecuteScalar().ToString();
+                    var scalarValue = (cmd.ExecuteScalar() ?? string.Empty).ToString();
                     return scalarValue;
                 }
             }
