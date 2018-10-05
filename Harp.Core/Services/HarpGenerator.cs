@@ -22,20 +22,20 @@ namespace Harp.Core.Services
             return new GenerateResults(GenerateResultCode.UnknownError);
         }
 
-        string generateEntityClass(string entityName, string rootNamespace, string[] columnNames)
+        string generateEntityClass(Entity entity, string rootNamespace)
         {
             var symbolProps = "{{{properties}}}";
             var template = @"
 using System;
 namespace " + rootNamespace + @"
 {
-    public class " + entityName + @"
+    public class " + entity.Name + @"
     {
         " + symbolProps + @"
     }
 }
 ";
-            var propertyNames = columnNames.Select(translateColumnToPropName);
+            var propertyNames = entity.Properties.Select(p => p.Key);
             var propertyDefinitions = propertyNames.Select(translateNameToPropDefinition);
 
             var classDefinition = template.Replace(symbolProps, string.Join(Environment.NewLine + "\t\t", propertyDefinitions));

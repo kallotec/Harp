@@ -26,15 +26,15 @@ namespace Harp.Core.Services
         {
             var results = new SyncResults();
 
+            var isValid = sql.ConfigureAndTest(mapFile.Config.SqlConnectionString);
+            if (!isValid)
+            {
+                results.Code = SynchronizeResultCode.InvalidSqlConnectionString;
+                return results;
+            }
+
             try
             {
-                var isValid = sql.ConfigureAndTest(mapFile.Config.SqlConnectionString);
-                if (!isValid)
-                {
-                    results.Code = SynchronizeResultCode.InvalidSqlConnectionString;
-                    return results;
-                }
-
                 foreach (var entry in mapFile.Entities)
                 {
                     int? tableId;
@@ -144,10 +144,11 @@ namespace Harp.Core.Services
                     // Behaviours, unmapped
                     if (entity.Behaviors.Any(b => string.IsNullOrWhiteSpace(b.Value)))
                     {
-                        for (int x = 0; x < entity.Behaviors.Count; x++)
+                        for (var x = 0; x < entity.Behaviors.Count; x++)
                         {
                             var behaveEntry = entity.Behaviors.ElementAt(x);
 
+                            // ignore already mapped behaviors
                             if (behaveEntry.Value != null)
                                 continue;
 
@@ -180,6 +181,8 @@ namespace Harp.Core.Services
                                                 .Except(entity.Behaviors.Select(b => b.Value));
                         results.UnmappedStoredProcs.AddRange(unmappedCols);
 
+                        // Ensure all stored procs that have been matched 
+                        // (either from this process or manually) exist.
                         var allExistingMappedProcsExist = entity.Behaviors.All(b => procsForEntity.Any(pr => string.Equals(pr.fullName, b.Value, StringComparison.OrdinalIgnoreCase)));
                         if (!allExistingMappedProcsExist)
                         {
@@ -207,6 +210,16 @@ namespace Harp.Core.Services
                         }
                     }
 
+                }
+
+                // Validate
+                foreach (var entity in mapFile.Entities.Select(e => e.Value))
+                {
+                    if (!entity.Behaviors.Any())
+                    {
+                        results.Code = SynchronizeResultCode.AtLeastOneBehaviorRequired;
+                        return results;
+                    }
                 }
 
                 results.Code = mapFile.Entities.All(e => e.Value.IsFullyMapped)
@@ -419,6 +432,7 @@ namespace " + rootNamespace + @"
             MatchedProcDoesNotExist,
             ColumnMatchingError,
             ProcMatchingError,
+            AtLeastOneBehaviorRequired,
         }
 
         public class SyncResults

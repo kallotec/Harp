@@ -46,34 +46,21 @@ namespace Harp.Tests
             var sync = new HarpSynchronizer(sqlMock.Object, new StringBuilder());
 
             var harpFile = new HarpFile();
-            harpFile.Entities.Add(new Entity
+            harpFile.Entities.Add("Dogs", new Entity
             {
                 Name = "Dogs",
-                Table = "",                 // blank
-                Properties = new List<Property>
+                Table = string.Empty, // blank
+                Properties = new Dictionary<string, string>
                 {
-                    new Property
-                    {
-                        Name = "ID",
-                        Column = ""         // blank
-                    },
-                    new Property
-                    {
-                        Name = "Name",
-                        Column = ""         // blank
-                    }
+                    { "ID", string.Empty }, // blank
+                    { "Name", string.Empty } // blank
                 },
-                Behaviors = new List<Behavior>
+                Behaviors = new Dictionary<string, string>
                 {
-                    new Behavior
-                    {
-                        Name = "Get by id",
-                        Proc = ""     // blank
-                    }
+                    { "Get by id", string.Empty } // blank
                 }
 
             });
-
 
             // Act
             var results = sync.Synchronize(harpFile);

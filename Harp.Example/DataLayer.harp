@@ -1,7 +1,6 @@
 Config:
   SqlConnectionString: Server=.\SQLEXPRESS;Database=Harp;Integrated Security=SSPI;
   OutputDirectory: asdf
-
 Entities:
   Dogs:
     Table: dbo.Dogs
@@ -15,3 +14,11 @@ Entities:
       Get all: dbo.GetAll
       Get by id: dbo.GetDogsById
       Update: dbo.UpdateDog
+  Cats:
+    Table: dbo.cats
+    Properties:
+      Cat Id: catid
+      Name: name
+      Age: age
+    Behaviors:
+      Get by id: dbo.GetCatBycatid

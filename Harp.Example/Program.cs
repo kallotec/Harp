@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Harp.Cmdline
+namespace Harp.Example
 {
     class Program
     {
